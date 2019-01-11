@@ -8,8 +8,9 @@ public class Event {
     private double fee;
     private int image;
     private String place;
+    private String url;
 
-    public Event(String title, String description, String datetime, String venue, double fee, int image, String place) {
+    public Event(String title, String description, String datetime, String venue, double fee, int image, String place, String url) {
         this.title = title;
         this.description = description;
         this.datetime = datetime;
@@ -17,6 +18,7 @@ public class Event {
         this.fee = fee;
         this.image = image;
         this.place= place;
+        this.url = url;
     }
 
     public String getTitle() {
@@ -73,6 +75,14 @@ public class Event {
 
     public void setPlace(String place) {
         this.place = place;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     @Override

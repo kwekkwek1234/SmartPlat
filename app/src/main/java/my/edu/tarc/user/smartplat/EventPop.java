@@ -1,7 +1,12 @@
 package my.edu.tarc.user.smartplat;
 import android.Manifest;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -20,7 +25,16 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
+import android.widget.Toast;
+import android.content.Context;
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
@@ -29,8 +43,20 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 
 public class EventPop extends AppCompatActivity {
@@ -39,6 +65,7 @@ public class EventPop extends AppCompatActivity {
     Button button;
     String latitude;
     String longitude;
+
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -58,7 +85,6 @@ public class EventPop extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.event_pop);
-
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         image = findViewById(R.id.image);
         textViewTitle = findViewById(R.id.title);
@@ -68,6 +94,8 @@ public class EventPop extends AppCompatActivity {
         textViewFee = findViewById(R.id.fee);
         button = findViewById(R.id.button);
 
+
+
         Bundle bundle = getIntent().getExtras();
         textViewTitle.setText(bundle.getString("title"));
         textViewDesc.setText(bundle.getString("desc"));
@@ -75,6 +103,7 @@ public class EventPop extends AppCompatActivity {
         textViewVenue.setText("Venue: " + bundle.getString("venue"));
         textViewFee.setText("Price: RM " + String.format("%.2f",bundle.getDouble("fee")));
         image.setImageResource(bundle.getInt("image"));
+
 
         DisplayMetrics dm = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(dm);
@@ -86,8 +115,9 @@ public class EventPop extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                System.out.println(textViewTitle.getText().toString().trim());
+                joinEvent();
             }
+
         });
 
         textViewVenue.setOnClickListener(new View.OnClickListener() {
@@ -103,7 +133,79 @@ public class EventPop extends AppCompatActivity {
 
             }
         });
+
+        image.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Bundle bundle = getIntent().getExtras();
+                String text = bundle.getString("url");
+                if(text!=null)
+                {
+                    MultiFormatWriter multiFormatWriter = new MultiFormatWriter();
+                    try {
+                        BitMatrix bitMatrix = multiFormatWriter.encode(text, BarcodeFormat.QR_CODE, 500, 500);
+                        BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
+                        Bitmap bitmap = barcodeEncoder.createBitmap(bitMatrix);
+                        image.setImageBitmap(bitmap);
+                    }catch(WriterException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
     }
+
+    public void joinEvent()
+    {
+        final String username = MainActivity.textViewNickName.getText().toString().trim();
+        final String eventName = textViewTitle.getText().toString().trim();
+
+        try {
+            StringRequest stringRequest = new StringRequest(Request.Method.POST,
+                    Constants.URL_JOINEVENT,
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            try {
+                                JSONObject jsonObject = new JSONObject(response);
+                                Toast.makeText(getApplicationContext(),
+                                        jsonObject.getString("message"),
+                                        Toast.LENGTH_LONG).show();
+                                System.out.print(jsonObject.getString("message"));
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            Toast.makeText(getApplicationContext(), error.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    }) {
+                @Override
+                protected Map<String, String> getParams() throws AuthFailureError {
+                    Map<String, String> params = new HashMap<>();
+                    params.put("UserName", username);
+                    params.put("EventName", eventName);
+                    return params;
+                }
+            };
+
+            RequestHandler.getInstance(this).addToRequestQueue(stringRequest);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+
+
+
+
     /**
      * Provides a simple way of getting a device's location and is well suited for
      * applications that do not require a fine-grained location and that do not need location
@@ -251,5 +353,6 @@ public class EventPop extends AppCompatActivity {
             }
         }
     }
+
 }
 
